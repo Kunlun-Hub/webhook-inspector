@@ -1,6 +1,8 @@
 # Cloudflare Webhook 接收与智能转发站 (Webhook Inspector)
 
-> 线上地址：<https://webhook-inspector.kfc4008208820.workers.dev>（Cloudflare Worker + D1，部署在免费额度内）
+- 仓库：<https://github.com/Kunlun-Hub/webhook-inspector>
+- 线上地址：<https://webhook-inspector.kfc4008208820.workers.dev>（Cloudflare Worker + D1，部署在免费额度内）
+- 部署指南：[DEPLOY.md](DEPLOY.md)（从零部署、升级、备份回滚、代理与排错）
 
 这是一个跑在 Cloudflare 边缘的轻量 Webhook 调试、查看与转发工具。
 
@@ -38,7 +40,8 @@
 | `qa_auth.py` | 浏览器级验收：创建弹窗、密码校验、控制台登录/锁定、令牌推送全链路 |
 | `qa_shots.py` | 重新抓取创建弹窗的三种状态截图（默认 / 已滚动 / 校验报错） |
 | `qa_features.py` | 浏览器级验收：首页单行主标题、首页统计条渲染与口径、渠道切换提示、注销端点全链路、已有端点找回全链路、转发规则配额 |
-| `verify_remote.py` | 生产冒烟测试：对已部署的 Worker 跑完整链路（28 项），不依赖本地服务 |
+| `verify_remote.py` | 生产冒烟测试：对已部署的 Worker 跑完整链路（36 项），不依赖本地服务 |
+| `DEPLOY.md` | 部署与运维指南：从零部署、升级、备份回滚、代理与排错 |
 | `local_check.py` | 本地前后端连通自检（首页 / 建端点 / 鉴权 / 推送 / 读取一次跑完） |
 
 修改任意一份源码后，重新拼装并校验：
@@ -146,12 +149,16 @@ Cloudflare **不向 Worker 暴露账号级用量**（请求 `/api/stats` 拿不�
 - **下拉选择器为自定义实现**（`.picker-*`，见 `part2.html`）：原生 `<select>` 的展开面板由操作系统绘制，CSS 无法干预，风格必然脱离设计规范。自定义面板挂在 `document.body` 上做 `position: fixed` 定位（弹窗是 `overflow:hidden`，挂在里面会被裁掉），支持方向键 / Home / End / Enter / Esc / 首字母快跳、点击外部关闭，空间不足时自动限高并向上翻转。表单契约不变：仍然读写隐藏字段 `#f-type`。
 
 ---
-## 部署上线步骤（只需两步）
+## 部署
 
-### 第一步：在终端中登录 Cloudflare
-打开 PowerShell，进入本目录：
+> **完整分步指南（从零部署 / 升级 / 备份回滚 / 排错）见 [DEPLOY.md](DEPLOY.md)。** 下面是同一件事的最短路径。
+
+### 第一步：克隆并登录 Cloudflare
+打开 PowerShell：
 ```powershell
-cd D:\cf-webhook-bin
+git clone https://github.com/Kunlun-Hub/webhook-inspector.git
+cd webhook-inspector
+npm install
 npx wrangler login
 ```
 *浏览器会自动弹窗，点击“Allow / 授权”完成登录。*
@@ -169,7 +176,7 @@ npx wrangler login
    database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
    ```
 2. **把上面的 `database_id` 填入 `wrangler.toml`**：
-   打开 `D:\cf-webhook-bin\wrangler.toml`，将 `PLACEHOLDER_DATABASE_ID` 替换为真实的 ID。
+   打开 `wrangler.toml`，把 `database_id` 换成你刚创建的那一串（仓库里带的是作者账号的库，不能直接用）。
 
 3. **在远程数据库执行建表 SQL**：
    ```powershell
@@ -221,7 +228,7 @@ npx wrangler deploy
 ## 本地开发/离线测试
 如果你想在本地继续调试，直接运行：
 ```powershell
-cd D:\cf-webhook-bin
-npx wrangler dev
+cd webhook-inspector
+npx wrangler dev --port 8787
 ```
 打开 `http://127.0.0.1:8787` 即可体验全部功能。
