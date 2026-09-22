@@ -1,0 +1,12 @@
+{
+  "name": "webhook-inspector",
+  "version": "1.0.0",
+  "description": "Cloudflare Webhook Inspector and Forwarder",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^3.114.17"
+  }
+}

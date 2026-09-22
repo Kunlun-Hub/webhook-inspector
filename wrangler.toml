@@ -1,0 +1,13 @@
+name = "webhook-inspector"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+# D1 数据库绑定
+[[d1_databases]]
+binding = "DB"
+database_name = "webhook_bin_db"
+database_id = "6a7f285a-55ec-4616-aee3-7886ae458fb7"
+
+# 每天凌晨 3:00 (北京时间) 触发清理任务：销毁超过 3 天未活动的端点
+[triggers]
+crons = ["0 19 * * *"]

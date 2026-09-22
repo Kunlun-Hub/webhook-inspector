@@ -1,0 +1,20 @@
+# 依赖与构建产物
+node_modules/
+.verify-tmp.mjs
+
+# wrangler 本地状态（本地 D1 数据目录，不要提交）
+.wrangler/
+.dev.vars
+.dev.vars.*
+
+# QA / 截图产物
+shots/
+.chrome-*/
+__pycache__/
+*.pyc
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini

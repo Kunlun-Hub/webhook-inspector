@@ -1,0 +1,1625 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>端点监控 ${binId} — Webhook Inspector</title>
+<style>
+  :root {
+    --primary: #0066cc;
+    --primary-hover: #0071e3;
+    --primary-focus: #0071e3;
+    --primary-on-dark: #2997ff;
+    --ink: #1d1d1f;
+    --ink-muted-80: #333333;
+    --ink-muted: #86868b;
+    --canvas: #ffffff;
+    --canvas-parchment: #f5f5f7;
+    --surface-pearl: #fafafc;
+    --hairline: #d2d2d7;
+    --hairline-soft: #e5e5ea;
+    --divider-soft: #f0f0f0;
+    --code-bg: #1e1e20;
+    --font-display: "SF Pro Display", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --font-text: "SF Pro Text", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--canvas-parchment);
+    color: var(--ink);
+    font-family: var(--font-text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Frosted Glass Top Sub-Nav */
+  .sub-nav {
+    height: 52px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid var(--hairline-soft);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 50;
+    flex-shrink: 0;
+  }
+  .nav-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .brand-chip {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.2px;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .brand-chip-icon {
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+  }
+  
+  /* Endpoint URL Capsule (Apple Full-Pill Radius 9999px) */
+  .url-capsule {
+    display: flex;
+    align-items: center;
+    background: var(--canvas);
+    border: 1px solid var(--hairline);
+    border-radius: 9999px;
+    padding: 3px 6px 3px 14px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--primary);
+    font-weight: 500;
+    gap: 8px;
+  }
+  #hook-url {
+    max-width: 34vw;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #34c759;
+    box-shadow: 0 0 0 2px rgba(52, 199, 89, 0.2);
+    display: inline-block;
+  }
+  .btn-capsule-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--surface-pearl);
+    border: 1px solid var(--hairline);
+    border-radius: 9999px;
+    font-family: var(--font-text);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink);
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .btn-capsule-copy:hover {
+    background: #e8e8ed;
+  }
+
+  .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-apple-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--canvas);
+    color: var(--ink);
+    border: 1px solid var(--hairline);
+    font-family: var(--font-text);
+    font-size: 13px;
+    font-weight: 400;
+    border-radius: 9999px;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .btn-apple-secondary:hover {
+    background: #eaeaea;
+  }
+  .btn-apple-danger {
+    color: #c5221f;
+    border-color: #fce8e6;
+    background: #fff;
+  }
+  .btn-apple-danger:hover {
+    background: #fce8e6;
+  }
+  .btn-apple-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--primary);
+    color: #ffffff;
+    font-family: var(--font-text);
+    font-size: 13px;
+    font-weight: 400;
+    border-radius: 9999px;
+    padding: 6px 14px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s;
+  }
+  .btn-apple-action:hover {
+    background: var(--primary-hover);
+  }
+
+  /* Split Pane Workspace */
+  .workspace {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    padding: 16px;
+    gap: 16px;
+  }
+
+  /* Left Sidebar (Store Utility Card Radius 18px, Hairline Border, 0 Shadow) */
+  .pane-sidebar {
+    width: 320px;
+    background: var(--canvas);
+    border-radius: 18px;
+    border: 1px solid var(--hairline-soft);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .side-h {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--hairline-soft);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .side-h-title {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.15px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .side-badge {
+    font-size: 11px;
+    color: var(--ink-muted);
+    background: var(--canvas-parchment);
+    padding: 2px 8px;
+    border-radius: 9999px;
+  }
+
+  /* Search & Filter Bar */
+  .side-filter-wrap {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--hairline-soft);
+    background: var(--surface-pearl);
+  }
+  .search-box {
+    display: flex;
+    align-items: center;
+    background: var(--canvas);
+    border: 1px solid var(--hairline);
+    border-radius: 9999px;
+    padding: 4px 10px;
+    gap: 6px;
+  }
+  .search-box svg {
+    color: var(--ink-muted);
+    flex-shrink: 0;
+  }
+  .search-input {
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 12px;
+    color: var(--ink);
+    width: 100%;
+    font-family: var(--font-text);
+  }
+  .search-input::placeholder {
+    color: var(--ink-muted);
+  }
+
+  .msg-stream {
+    flex: 1;
+    overflow-y: auto;
+  }
+  .msg-row {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--hairline-soft);
+    cursor: pointer;
+    transition: background 0.12s ease;
+  }
+  .msg-row:hover {
+    background: #f7f7f9;
+  }
+  .msg-row.active {
+    background: #f0f6ff;
+    position: relative;
+  }
+  .msg-row.active::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 8px;
+    bottom: 8px;
+    width: 3px;
+    background: var(--primary);
+    border-radius: 0 3px 3px 0;
+  }
+  .row-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  .method-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 5px;
+  }
+  .m-POST { background: #e6f4ea; color: #137333; }
+  .m-GET { background: #e8f0fe; color: #1a73e8; }
+  .m-PUT { background: #fef7e0; color: #b06000; }
+  .m-DELETE { background: #fce8e6; color: #c5221f; }
+  .row-time {
+    font-size: 11.5px;
+    color: var(--ink-muted);
+    font-family: var(--font-mono);
+  }
+  .row-bottom {
+    font-size: 12px;
+    color: var(--ink-muted);
+    display: flex;
+    justify-content: space-between;
+  }
+  .row-preview {
+    font-size: 12px;
+    color: var(--ink-muted-80);
+    margin-top: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--font-mono);
+  }
+
+  /* Right Detail Pane */
+  .pane-detail {
+    flex: 1;
+    background: var(--canvas);
+    border-radius: 18px;
+    border: 1px solid var(--hairline-soft);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .detail-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: none;
+  }
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--ink-muted);
+    padding: 40px;
+  }
+  .empty-icon-box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--canvas-parchment);
+    margin-bottom: 16px;
+    color: var(--primary);
+  }
+  .empty-h {
+    font-family: var(--font-display);
+    font-size: 19px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.2px;
+    margin-bottom: 8px;
+  }
+  .empty-p {
+    font-size: 14px;
+    line-height: 1.5;
+    max-width: 440px;
+    margin-bottom: 24px;
+  }
+  .test-snippet-box {
+    background: var(--canvas-parchment);
+    border: 1px solid var(--hairline-soft);
+    border-radius: 12px;
+    padding: 14px 18px;
+    text-align: left;
+    max-width: 480px;
+    width: 100%;
+  }
+  .test-snippet-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-muted-80);
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .test-snippet-code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink);
+    word-break: break-all;
+  }
+  .token-note {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--hairline-soft);
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: var(--ink-muted);
+    text-align: left;
+  }
+  .token-note code {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    background: var(--canvas);
+    border: 1px solid var(--hairline-soft);
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+
+  /* Card Sections in Detail */
+  .card-section {
+    background: var(--canvas-parchment);
+    border-radius: 14px;
+    border: 1px solid var(--hairline-soft);
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .card-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .card-h-text {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.15px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .meta-grid {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    gap: 8px;
+    font-size: 13px;
+  }
+  .meta-label {
+    color: var(--ink-muted);
+    font-weight: 500;
+  }
+  .meta-value {
+    color: var(--ink);
+    word-break: break-all;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+  }
+
+  /* Headers Table */
+  .headers-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    font-family: var(--font-mono);
+  }
+  .headers-table tr:not(:last-child) td {
+    border-bottom: 1px solid var(--divider-soft);
+  }
+  .headers-table td {
+    padding: 6px 8px;
+    vertical-align: top;
+  }
+  .hdr-name {
+    color: var(--primary);
+    font-weight: 500;
+    width: 32%;
+    word-break: break-all;
+  }
+  .hdr-val {
+    color: var(--ink);
+    word-break: break-all;
+  }
+
+  /* macOS Terminal Frame */
+  .terminal-box {
+    background: var(--code-bg);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+  .terminal-topbar {
+    background: #141416;
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .terminal-dots {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .terminal-title {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: #a1a1aa;
+  }
+  pre.code-content {
+    padding: 14px 16px;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: #e4e4e7;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 480px;
+  }
+
+  /* Forwarding Receipts */
+  .fwd-pill-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 13px;
+  }
+  .fwd-receipt {
+    padding: 8px 12px;
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid var(--hairline-soft);
+    color: var(--primary);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Apple Sheet Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .apple-sheet {
+    background: #ffffff;
+    width: 520px;
+    max-width: 92vw;
+    border-radius: 18px;
+    overflow: hidden;
+    animation: sheetIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes sheetIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .sheet-h {
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--hairline-soft);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .sheet-title {
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sheet-close {
+    background: var(--canvas-parchment);
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-muted);
+    transition: background 0.15s, color 0.15s;
+  }
+  .sheet-close:hover {
+    background: #e5e5ea;
+    color: var(--ink);
+  }
+  .sheet-b {
+    padding: 22px;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  .form-group {
+    margin-bottom: 16px;
+  }
+  .form-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-muted);
+    letter-spacing: -0.1px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+  .form-control {
+    width: 100%;
+    background: var(--canvas-parchment);
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: var(--font-text);
+    font-size: 14px;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .form-control:focus {
+    background: #ffffff;
+    border-color: var(--primary);
+  }
+  .form-hint {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--ink-muted);
+    margin-top: 6px;
+  }
+
+  /* 自定义下拉：原生 select 的面板由系统绘制，无法贴合设计规范 */
+  .picker-trigger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: var(--canvas-parchment);
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: var(--font-text);
+    font-size: 14px;
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .picker-trigger:hover { background: #ffffff; }
+  .picker-trigger:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+  .picker.is-open .picker-trigger { background: #ffffff; border-color: var(--primary); }
+  .picker-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .picker-chevron { flex-shrink: 0; color: var(--ink-muted); transition: transform 0.2s; }
+  .picker.is-open .picker-chevron { transform: rotate(180deg); }
+
+  /* 浮层不做投影：靠表面色 + 背景模糊分层，与规范一致 */
+  .picker-panel {
+    position: fixed;
+    z-index: 1100;
+    overflow-y: auto;
+    padding: 6px;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+  }
+  .picker-group {
+    padding: 8px 10px 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+  .picker-group:not(:first-child) {
+    margin-top: 4px;
+    padding-top: 10px;
+    border-top: 1px solid var(--hairline-soft);
+  }
+  .picker-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 40px;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .picker-option.is-active { background: var(--canvas-parchment); }
+  .picker-option.is-selected { color: var(--primary); }
+  .picker-option-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .picker-check { flex-shrink: 0; }
+  .forwarder-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--canvas-parchment);
+    padding: 10px 14px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    border: 1px solid var(--hairline-soft);
+  }
+  .fwd-info-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .fwd-info-url {
+    font-size: 12px;
+    color: var(--ink-muted);
+    font-family: var(--font-mono);
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .fwd-del-btn {
+    background: transparent;
+    border: none;
+    color: #c5221f;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+  }
+  .fwd-del-btn:hover {
+    background: #fce8e6;
+  }
+</style>
+</head>
+<body>
+  <!-- Top Frosted Navigation -->
+  <header class="sub-nav">
+    <div class="nav-left">
+      <a href="/" class="brand-chip" title="返回首页">
+        <span class="brand-chip-icon">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 8h13"/>
+            <path d="m10 4-4 4 4 4"/>
+            <path d="M18 16H5"/>
+            <path d="m14 12 4 4-4 4"/>
+          </svg>
+        </span>
+        <span>Inspector</span>
+      </a>
+      
+      <div class="url-capsule">
+        <span class="live-dot" title="实时监听中"></span>
+        <span id="hook-url">${hookUrl}</span>
+        <button class="btn-capsule-copy" onclick="copyHook()" id="btn-copy-hook" title="复制可直接使用的完整推送地址（含访问令牌）">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+          <span>拷贝地址</span>
+        </button>
+      </div>
+    </div>
+    
+    <div class="nav-right">
+      <button class="btn-apple-secondary btn-apple-danger" onclick="destroyEndpoint()" title="永久删除该端点及其全部记录，推送地址立即失效">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="4.9" y1="4.9" x2="19.1" y2="19.1"/>
+        </svg>
+        <span>注销端点</span>
+      </button>
+
+      <button class="btn-apple-secondary" onclick="openModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="18" cy="5" r="3"/>
+          <circle cx="6" cy="12" r="3"/>
+          <circle cx="18" cy="19" r="3"/>
+          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+        </svg>
+        <span>转发配置 (<span id="f-count">0</span>)</span>
+      </button>
+
+      <button class="btn-apple-secondary btn-apple-danger" onclick="clearMessages()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+        </svg>
+        <span>清空消息</span>
+      </button>
+
+      <button class="btn-apple-secondary" onclick="logoutConsole()" title="清除本机登录状态，下次查看需要重新输入密码">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        <span>锁定控制台</span>
+      </button>
+
+      <button class="btn-apple-action" onclick="location.href='/'">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        <span>新建端点</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Workspace Split Pane -->
+  <main class="workspace">
+    <!-- Left Sidebar: Event List -->
+    <section class="pane-sidebar">
+      <div class="side-h">
+        <span class="side-h-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="6" x2="21" y2="6"/>
+            <line x1="8" y1="12" x2="21" y2="12"/>
+            <line x1="8" y1="18" x2="21" y2="18"/>
+            <line x1="3" y1="6" x2="3.01" y2="6"/>
+            <line x1="3" y1="12" x2="3.01" y2="12"/>
+            <line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+          接收队列
+        </span>
+        <span class="side-badge" id="count-tag">0 条</span>
+      </div>
+
+      <div class="side-filter-wrap">
+        <div class="search-box">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" class="search-input" id="search-filter" placeholder="搜索 Method、IP 或内容..." oninput="filterMessages()">
+        </div>
+      </div>
+
+      <div class="msg-stream" id="msg-list">
+        <div style="padding: 32px 20px; text-align: center; color: var(--ink-muted); font-size: 13px;">
+          正在持续监听新请求...
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Detail Pane -->
+    <section class="pane-detail">
+      <!-- Empty State -->
+      <div class="empty-state" id="empty-hint">
+        <div class="empty-icon-box">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 12h-6l-2 3h-4l-2-3H2"/>
+            <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+          </svg>
+        </div>
+        <h3 class="empty-h">端点已就绪，等待传入请求</h3>
+        <p class="empty-p">将上方的专属 Webhook 地址填入外部业务系统、告警组件或集成后台中。任何到达此端点的 HTTP 请求都将毫秒级在左侧队列与此面板展现。</p>
+        
+        <div class="test-snippet-box">
+          <div class="test-snippet-title">
+            <span>快速测试示例 (cURL)</span>
+            <button class="btn-apple-secondary" style="padding: 2px 8px; font-size: 11px;" onclick="copyCurlTest()">拷贝</button>
+          </div>
+          <div class="test-snippet-code" id="curl-cmd">curl -X POST "${hookUrl}" -H "Content-Type: application/json" -d '{"event":"test","message":"Hello Webhook"}'</div>
+          <div class="token-note" id="token-note"></div>
+        </div>
+      </div>
+
+      <!-- Detail Body (Selected Message) -->
+      <div class="detail-body" id="detail-box">
+        <!-- Card 1: Overview -->
+        <div class="card-section">
+          <div class="card-title-row">
+            <span class="card-h-text">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="16" x2="12" y2="12"/>
+                <line x1="12" y1="8" x2="12.01" y2="8"/>
+              </svg>
+              请求概览
+            </span>
+            <span style="font-size: 12px; color: var(--ink-muted); font-family: var(--font-mono);" id="d-time"></span>
+          </div>
+          <div class="meta-grid" id="d-meta"></div>
+        </div>
+
+        <!-- Card 2: Headers -->
+        <div class="card-section" id="card-headers">
+          <div class="card-title-row">
+            <span class="card-h-text">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 6h16"/>
+                <path d="M4 12h16"/>
+                <path d="M4 18h12"/>
+              </svg>
+              请求头 (Request Headers)
+            </span>
+            <button class="btn-apple-secondary" style="font-size:12px; padding:3px 10px;" onclick="copyHeaders()">拷贝 Headers</button>
+          </div>
+          <div style="overflow-x: auto;">
+            <table class="headers-table" id="d-headers-table"></table>
+          </div>
+        </div>
+
+        <!-- Card 3: Query Params (Optional) -->
+        <div class="card-section" id="card-query" style="display:none;">
+          <div class="card-title-row">
+            <span class="card-h-text">URL 查询参数 (Query Parameters)</span>
+          </div>
+          <div class="meta-grid" id="d-query"></div>
+        </div>
+
+        <!-- Card 4: Raw Payload -->
+        <div class="card-section" style="background:#ffffff; border:none; padding:0;">
+          <div class="card-title-row" style="margin-bottom: 8px;">
+            <span class="card-h-text">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="16 18 22 12 16 6"/>
+                <polyline points="8 6 2 12 8 18"/>
+              </svg>
+              原始载荷 (Raw Payload)
+            </span>
+            <div style="display:flex; gap:6px;">
+              <button class="btn-apple-secondary" style="font-size:12px; padding:4px 10px;" onclick="toggleFormat()" id="btn-toggle-json">格式化 JSON</button>
+              <button class="btn-apple-secondary" style="font-size:12px; padding:4px 10px;" onclick="copyRaw()">拷贝原文</button>
+            </div>
+          </div>
+          <div class="terminal-box">
+            <div class="terminal-topbar">
+              <div class="terminal-dots">
+                <span class="dot dot-red"></span>
+                <span class="dot dot-yellow"></span>
+                <span class="dot dot-green"></span>
+              </div>
+              <span class="terminal-title" id="terminal-filename">payload.raw</span>
+            </div>
+            <pre class="code-content" id="d-raw"></pre>
+          </div>
+        </div>
+
+        <!-- Card 5: Forwarding Receipts -->
+        <div class="card-section" id="card-fwd" style="display:none; margin-top:16px;">
+          <div class="card-title-row">
+            <span class="card-h-text">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              协同转发回执
+            </span>
+          </div>
+          <div class="fwd-pill-list" id="d-fwd"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Forwarder Modal Sheet -->
+  <div class="modal-overlay" id="f-modal">
+    <div class="apple-sheet">
+      <div class="sheet-h">
+        <span class="sheet-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);">
+            <circle cx="18" cy="5" r="3"/>
+            <circle cx="6" cy="12" r="3"/>
+            <circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+          转发目标与推送渠道
+        </span>
+        <button class="sheet-close" onclick="closeModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="sheet-b">
+        <div style="margin-bottom: 20px;">
+          <span class="form-label">生效中的转发目标 <span id="f-quota" style="color:var(--ink-muted); font-weight:400;"></span></span>
+          <div id="f-list" style="margin-top: 8px;">
+            <div style="color:var(--ink-muted); font-size:13px;">暂未添加转发目标</div>
+          </div>
+        </div>
+
+        <div style="border-top: 1px solid var(--hairline-soft); padding-top: 18px;">
+          <span class="form-label">添加新目标</span>
+          <div class="form-hint" id="f-cap"></div>
+          
+          <div class="form-group" style="margin-top:10px;">
+            <span class="form-label" id="f-type-label">适配平台</span>
+            <input type="hidden" id="f-type" value="wecom">
+            <div class="picker" id="f-picker">
+              <button type="button" class="picker-trigger" id="f-picker-trigger"
+                      aria-haspopup="listbox" aria-expanded="false" aria-controls="f-picker-panel"
+                      aria-labelledby="f-type-label" onclick="togglePicker()" onkeydown="pickerTriggerKey(event)">
+                <span class="picker-value" id="f-picker-label">企业微信 · 群机器人</span>
+                <svg class="picker-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">规则名称 / 备注</label>
+            <input type="text" class="form-control" id="f-name" placeholder="例如：SRE 核心告警群">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">目标 Webhook 地址</label>
+            <input type="text" class="form-control" id="f-url" placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=...">
+            <div class="form-hint" id="f-hint"></div>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:20px;">
+            <button class="btn-apple-secondary" onclick="closeModal()">取消</button>
+            <button class="btn-apple-action" id="f-save" onclick="saveForwarder()">保存并启用</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const BIN_ID = "${binId}";
+
+// 密码 = 控制台登录口令 = 推送令牌。创建或登录时写入 sessionStorage，
+// 只用来在本地拼出可直接使用的推送地址；页面文本刻意不显示令牌本身，
+// 这样截图、投屏、共享屏幕都不会连带泄露。
+const WH_TOKEN = (function () {
+  try {
+    const pending = sessionStorage.getItem('wh_pending_pwd');
+    if (pending) {
+      sessionStorage.setItem('wh_token_' + BIN_ID, pending);
+      sessionStorage.removeItem('wh_pending_pwd');
+      return pending;
+    }
+    return sessionStorage.getItem('wh_token_' + BIN_ID) || '';
+  } catch (e) {
+    return '';
+  }
+})();
+
+const HOOK_BASE = (document.getElementById('hook-url').innerText || '').trim();
+
+function pushUrl() {
+  return WH_TOKEN ? HOOK_BASE + '?token=' + encodeURIComponent(WH_TOKEN) : HOOK_BASE;
+}
+
+const UTF8 = new TextEncoder();
+
+let messages = [];
+let forwarders = [];
+let forwardLimit = 10;
+let currentMsg = null;
+let isFormatted = false;
+
+// D1 stores created_at as UTC "YYYY-MM-DD HH:MM:SS"; render in the viewer's local timezone.
+function toLocalDate(s) {
+  if (!s) return null;
+  const d = new Date(String(s).replace(' ', 'T') + 'Z');
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function fmtTime(s) {
+  const d = toLocalDate(s);
+  if (!d) return String(s || '').split(' ')[1] || '';
+  return d.toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function fmtDateTime(s) {
+  const d = toLocalDate(s);
+  if (!d) return String(s || '');
+  const pad = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' +
+         pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()) + ' 本地时间';
+}
+
+function copyHook() {
+  const url = pushUrl();
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById('btn-copy-hook');
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:#34c759;"><polyline points="20 6 9 17 4 12"/></svg><span>已复制</span>`;
+    setTimeout(() => {
+      btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span>拷贝地址</span>`;
+    }, 2000);
+  });
+}
+
+function copyCurlTest() {
+  const cmd = document.getElementById('curl-cmd').innerText;
+  navigator.clipboard.writeText(cmd);
+}
+
+function copyRaw() {
+  if (currentMsg) {
+    navigator.clipboard.writeText(currentMsg.raw_body);
+  }
+}
+
+function copyHeaders() {
+  if (currentMsg && currentMsg.headers) {
+    navigator.clipboard.writeText(currentMsg.headers);
+  }
+}
+
+function toggleFormat() {
+  if (!currentMsg) return;
+  const rawEl = document.getElementById('d-raw');
+  const btn = document.getElementById('btn-toggle-json');
+  const fn = document.getElementById('terminal-filename');
+  if (!isFormatted) {
+    try {
+      const obj = JSON.parse(currentMsg.raw_body);
+      rawEl.textContent = JSON.stringify(obj, null, 2);
+      btn.textContent = '原始文本';
+      fn.textContent = 'payload.json';
+      isFormatted = true;
+    } catch (e) {
+      alert('内容不是有效的 JSON 格式');
+    }
+  } else {
+    rawEl.textContent = currentMsg.raw_body;
+    btn.textContent = '格式化 JSON';
+    fn.textContent = 'payload.raw';
+    isFormatted = false;
+  }
+}
+
+// 会话 Cookie 过期或在新标签页丢失时，回到登录页而不是静默空转
+function ensureAuth(res) {
+  if (res.status === 401) {
+    location.href = '/view/' + BIN_ID;
+    return false;
+  }
+  return true;
+}
+
+function hydratePushTargets() {
+  const curlEl = document.getElementById('curl-cmd');
+  if (curlEl && WH_TOKEN) {
+    curlEl.innerText = curlEl.innerText.split(HOOK_BASE).join(pushUrl());
+  }
+  const note = document.getElementById('token-note');
+  if (!note) return;
+  note.innerHTML = WH_TOKEN
+    ? '推送地址已自动带上令牌，上面的示例可直接执行；带令牌的完整地址等同于密码，请勿贴进群聊、工单或公开仓库。'
+    : '当前标签页没有缓存令牌（可能是在别的标签页登录的）。请在地址末尾手动追加 <code>?token=你的密码</code>，或改用 <code>X-Webhook-Token</code> 请求头携带密码。';
+}
+
+async function loadData() {
+  try {
+    const res = await fetch('/api/' + BIN_ID + '/events');
+    if (!ensureAuth(res)) return;
+    const data = await res.json();
+    messages = data.messages || [];
+    renderList();
+  } catch (err) {
+    console.error('加载事件失败', err);
+  }
+}
+
+// 免费版每次 hook 调用只有 50 个子请求，转发规则必须封顶；上限由接口下发
+function syncForwarderQuota(limit) {
+  if (limit) forwardLimit = limit;
+  const full = forwarders.length >= forwardLimit;
+  const quota = document.getElementById('f-quota');
+  if (quota) quota.textContent = forwarders.length + ' / ' + forwardLimit;
+  const btn = document.getElementById('f-save');
+  if (btn) {
+    btn.disabled = full;
+    btn.title = full ? ('每个端点最多 ' + forwardLimit + ' 条转发规则') : '';
+  }
+  const cap = document.getElementById('f-cap');
+  if (cap) {
+    cap.textContent = full
+      ? ('已达上限 ' + forwardLimit + ' 条，如需新增请先删除一条。')
+      : ('每条消息会逐条转发到以上目标，最多 ' + forwardLimit + ' 条。');
+  }
+}
+
+async function loadForwarders() {
+  try {
+    const res = await fetch('/api/' + BIN_ID + '/forwarders');
+    if (!ensureAuth(res)) return;
+    const data = await res.json();
+    forwarders = data.forwarders || [];
+    document.getElementById('f-count').textContent = forwarders.length;
+    renderForwarderList();
+    syncForwarderQuota(data.limit);
+  } catch (err) {
+    console.error('加载转发器失败', err);
+  }
+}
+
+function filterMessages() {
+  renderList();
+}
+
+function renderList() {
+  const listEl = document.getElementById('msg-list');
+  const countEl = document.getElementById('count-tag');
+  const q = (document.getElementById('search-filter') ? document.getElementById('search-filter').value.trim().toLowerCase() : '');
+
+  const filtered = messages.filter(m => {
+    if (!q) return true;
+    return (m.method && m.method.toLowerCase().includes(q)) ||
+           (m.client_ip && m.client_ip.includes(q)) ||
+           (m.raw_body && m.raw_body.toLowerCase().includes(q));
+  });
+
+  countEl.textContent = filtered.length + ' 条';
+
+  if (filtered.length === 0) {
+    listEl.innerHTML = '<div style="padding: 32px 20px; text-align: center; color: var(--ink-muted); font-size: 13px;">' +
+      (messages.length === 0 ? '正在持续监听新请求...' : '无匹配的筛选结果') + '</div>';
+    return;
+  }
+
+  let html = '';
+  filtered.forEach(m => {
+    const active = (currentMsg && currentMsg.id === m.id) ? 'active' : '';
+    const timeStr = fmtTime(m.created_at);
+    const preview = (m.raw_body || '').trim().replace(/\s+/g, ' ').slice(0, 48);
+    html += `
+      <div class="msg-row ${active}" onclick="selectMsg(${m.id})">
+        <div class="row-top">
+          <span class="method-badge m-${m.method}">${m.method}</span>
+          <span class="row-time">${timeStr}</span>
+        </div>
+        <div class="row-bottom">
+          <span>${m.client_ip || '未知 IP'}</span>
+          <span>${m.raw_body ? m.raw_body.length + ' B' : '0 B'}</span>
+        </div>
+        <div class="row-preview">${preview ? escapeHtml(preview) : '空载荷'}</div>
+      </div>
+    `;
+  });
+  listEl.innerHTML = html;
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function selectMsg(id) {
+  currentMsg = messages.find(m => m.id === id);
+  if (!currentMsg) return;
+  renderList();
+
+  document.getElementById('empty-hint').style.display = 'none';
+  document.getElementById('detail-box').style.display = 'block';
+
+  document.getElementById('d-time').textContent = fmtDateTime(currentMsg.created_at);
+  
+  // Meta：按 UTF-8 字节计算，口径与入库上限、截断标注一致
+  const bodyBytes = currentMsg.raw_body ? UTF8.encode(currentMsg.raw_body).length : 0;
+  document.getElementById('d-meta').innerHTML = `
+    <span class="meta-label">请求方法</span><span class="meta-value">${currentMsg.method}</span>
+    <span class="meta-label">来源 IP</span><span class="meta-value">${currentMsg.client_ip || '未知'}</span>
+    <span class="meta-label">载荷大小</span><span class="meta-value">${bodyBytes} 字节</span>
+  `;
+
+  // Headers Table
+  let hdrsHtml = '';
+  try {
+    const hObj = JSON.parse(currentMsg.headers || '{}');
+    for (const [k, v] of Object.entries(hObj)) {
+      hdrsHtml += `<tr><td class="hdr-name">${escapeHtml(k)}</td><td class="hdr-val">${escapeHtml(String(v))}</td></tr>`;
+    }
+  } catch (e) {
+    hdrsHtml = `<tr><td colspan="2" class="hdr-val">${escapeHtml(currentMsg.headers || '')}</td></tr>`;
+  }
+  document.getElementById('d-headers-table').innerHTML = hdrsHtml || '<tr><td colspan="2" style="color:var(--ink-muted);">无请求头</td></tr>';
+
+  // Query Params
+  const qCard = document.getElementById('card-query');
+  if (currentMsg.query_params && currentMsg.query_params.length > 1) {
+    qCard.style.display = 'block';
+    document.getElementById('d-query').innerHTML = `
+      <span class="meta-label">原始 Query</span><span class="meta-value">${escapeHtml(currentMsg.query_params)}</span>
+    `;
+  } else {
+    qCard.style.display = 'none';
+  }
+
+  // Raw
+  isFormatted = false;
+  document.getElementById('btn-toggle-json').textContent = '格式化 JSON';
+  document.getElementById('terminal-filename').textContent = 'payload.raw';
+  document.getElementById('d-raw').textContent = currentMsg.raw_body || '(空载荷)';
+
+  // Forwarding Logs
+  const fwdCard = document.getElementById('card-fwd');
+  if (currentMsg.forward_logs) {
+    fwdCard.style.display = 'block';
+    const lines = currentMsg.forward_logs.split('\n');
+    document.getElementById('d-fwd').innerHTML = lines.map(l => 
+      `<div class="fwd-receipt">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <span>${escapeHtml(l)}</span>
+      </div>`
+    ).join('');
+  } else {
+    fwdCard.style.display = 'none';
+  }
+}
+
+async function clearMessages() {
+  if (!confirm('确定要清空当前端点的所有历史接收记录吗？')) return;
+  await fetch('/api/' + BIN_ID + '/clear', { method: 'POST' });
+  currentMsg = null;
+  document.getElementById('detail-box').style.display = 'none';
+  document.getElementById('empty-hint').style.display = 'flex';
+  await loadData();
+}
+
+// 主动丢弃会话：清掉本机缓存令牌并作废 Cookie，回到需要密码的登录页
+function logoutConsole() {
+  if (!confirm('锁定后需要重新输入密码才能查看这个端点，确定继续吗？')) return;
+  try { sessionStorage.removeItem('wh_token_' + BIN_ID); } catch (e) {}
+  const f = document.createElement('form');
+  f.method = 'POST';
+  f.action = '/api/' + BIN_ID + '/logout';
+  document.body.appendChild(f);
+  f.submit();
+}
+
+// 注销端点：不可恢复，二次确认后才提交
+function destroyEndpoint() {
+  if (!confirm('注销端点 ' + BIN_ID + '？\n\n该端点、它收到的全部报文与转发规则会被立即永久删除，推送地址随即失效。')) return;
+  if (!confirm('再次确认：此操作不可恢复，删除后无法找回任何数据。\n\n确定要继续吗？')) return;
+  try { sessionStorage.removeItem('wh_token_' + BIN_ID); } catch (e) {}
+  const f = document.createElement('form');
+  f.method = 'POST';
+  f.action = '/api/' + BIN_ID + '/destroy';
+  document.body.appendChild(f);
+  f.submit();
+}
+
+// 各渠道的目标地址形态差别很大，选平台时同步给出示例与获取路径
+const FORWARD_PRESETS = {
+  wecom: { url: 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=...', hint: '企业微信群 → 群机器人 → 添加机器人，复制 Webhook 地址。' },
+  dingtalk: { url: 'https://oapi.dingtalk.com/robot/send?access_token=...', hint: '钉钉群 → 群设置 → 智能群助手 → 添加机器人 → 自定义。' },
+  feishu: { url: 'https://open.feishu.cn/open-apis/bot/v2/hook/...', hint: '飞书群 → 设置 → 群机器人 → 添加机器人 → 自定义机器人。' },
+  telegram: { url: 'https://api.telegram.org/bot<BOT_TOKEN>/sendMessage?chat_id=<CHAT_ID>', hint: '找 @BotFather 创建机器人拿 token，chat_id 用 @userinfobot 查，两者拼进地址。' },
+  discord: { url: 'https://discord.com/api/webhooks/<ID>/<TOKEN>', hint: '频道 → 编辑频道 → 整合 → Webhook → 新建 → 复制 Webhook URL。' },
+  slack: { url: 'https://hooks.slack.com/services/...', hint: 'Slack 应用的 Incoming Webhook；Mattermost / Rocket.Chat 的 Slack 兼容入口也可直接用。' },
+  ntfy: { url: 'https://ntfy.sh/<你的主题>', hint: '主题名直接写在地址里，无需注册；自建服务换成你自己的域名。' },
+  bark: { url: 'https://api.day.app/<你的KEY>', hint: 'Bark App 首页显示专属 Key；自建服务换成你的域名。' },
+  gotify: { url: 'https://<你的域名>/message?token=<APP_TOKEN>', hint: 'Gotify 后台 → Apps → 创建应用 → 复制 token，拼进地址。' },
+  serverchan: { url: 'https://sctapi.ftqq.com/<SENDKEY>.send', hint: 'Server 酱后台复制 SendKey，替换地址里的 <SENDKEY>。' },
+  raw: { url: 'https://your-endpoint.example.com/hook', hint: '把收到的原始报文原封不动 POST 过去，不做任何封装。' }
+};
+
+// 渠道清单（分组）—— 页面下拉、列表标签都以这里为唯一来源
+const FORWARD_CHOICES = [
+  ['群机器人', [
+    ['wecom', '企业微信 · 群机器人'],
+    ['dingtalk', '钉钉 · 群机器人'],
+    ['feishu', '飞书 · 自定义机器人'],
+    ['telegram', 'Telegram · Bot'],
+    ['discord', 'Discord · Webhook'],
+    ['slack', 'Slack · Incoming Webhook']
+  ]],
+  ['推送渠道', [
+    ['ntfy', 'ntfy（含自建服务）'],
+    ['bark', 'Bark（iOS 推送）'],
+    ['gotify', 'Gotify（自建推送）'],
+    ['serverchan', 'Server 酱']
+  ]],
+  ['通用', [
+    ['raw', '原样透传 · 自定义 Webhook']
+  ]]
+];
+
+const FORWARD_LABELS = {};
+FORWARD_CHOICES.forEach(function (group) {
+  group[1].forEach(function (item) { FORWARD_LABELS[item[0]] = item[1]; });
+});
+
+const PICKER_TICK = '<svg class="picker-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+
+let pickerRows = [];
+let pickerIndex = -1;
+let pickerTyped = '';
+let pickerTypedTimer = null;
+
+function pickerValue() {
+  return document.getElementById('f-type').value;
+}
+
+function setPickerValue(value) {
+  document.getElementById('f-type').value = value;
+  const label = document.getElementById('f-picker-label');
+  if (label) label.textContent = FORWARD_LABELS[value] || value;
+}
+
+function buildPickerPanel() {
+  const current = pickerValue();
+  const panel = document.createElement('div');
+  panel.className = 'picker-panel';
+  panel.id = 'f-picker-panel';
+  panel.setAttribute('role', 'listbox');
+  let html = '';
+  FORWARD_CHOICES.forEach(function (group) {
+    html += '<div class="picker-group" role="presentation">' + group[0] + '</div>';
+    group[1].forEach(function (item) {
+      const selected = item[0] === current;
+      html += '<div class="picker-option' + (selected ? ' is-selected' : '') + '"'
+        + ' role="option" id="f-opt-' + item[0] + '" data-value="' + item[0] + '"'
+        + ' aria-selected="' + (selected ? 'true' : 'false') + '">'
+        + '<span class="picker-option-text">' + item[1] + '</span>'
+        + (selected ? PICKER_TICK : '')
+        + '</div>';
+    });
+  });
+  panel.innerHTML = html;
+  Array.prototype.forEach.call(panel.querySelectorAll('.picker-option'), function (row) {
+    row.addEventListener('mousedown', function (ev) { ev.preventDefault(); });
+    row.addEventListener('click', function () { choosePicker(row.dataset.value); });
+  });
+  return panel;
+}
+
+// 面板固定在 body 上：弹窗是 overflow:hidden，挂在里面会被裁掉
+function positionPickerPanel() {
+  const panel = document.getElementById('f-picker-panel');
+  const trigger = document.getElementById('f-picker-trigger');
+  if (!panel || !trigger) return;
+  const rect = trigger.getBoundingClientRect();
+  const gap = 6;
+  const limit = Math.min(340, Math.max(160, window.innerHeight - rect.bottom - gap - 12));
+  panel.style.left = rect.left + 'px';
+  panel.style.width = rect.width + 'px';
+  panel.style.maxHeight = limit + 'px';
+  const height = Math.min(panel.scrollHeight, limit);
+  const flip = rect.bottom + gap + height > window.innerHeight - 12 && rect.top - gap - height > 12;
+  panel.style.top = (flip ? rect.top - gap - height : rect.bottom + gap) + 'px';
+}
+
+function paintPickerCursor() {
+  pickerRows.forEach(function (row, i) { row.classList.toggle('is-active', i === pickerIndex); });
+}
+
+function onPickerOutside(ev) {
+  const panel = document.getElementById('f-picker-panel');
+  const wrap = document.getElementById('f-picker');
+  if (panel && panel.contains(ev.target)) return;
+  if (wrap && wrap.contains(ev.target)) return;
+  closePicker();
+}
+
+function onPickerKey(ev) {
+  if (!pickerRows.length) return;
+  if (ev.key === 'Escape') {
+    ev.preventDefault();
+    closePicker();
+    document.getElementById('f-picker-trigger').focus();
+    return;
+  }
+  if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+    ev.preventDefault();
+    const step = ev.key === 'ArrowDown' ? 1 : -1;
+    pickerIndex = (pickerIndex + step + pickerRows.length) % pickerRows.length;
+    paintPickerCursor();
+    pickerRows[pickerIndex].scrollIntoView({ block: 'nearest' });
+    return;
+  }
+  if (ev.key === 'Home' || ev.key === 'End') {
+    ev.preventDefault();
+    pickerIndex = ev.key === 'Home' ? 0 : pickerRows.length - 1;
+    paintPickerCursor();
+    pickerRows[pickerIndex].scrollIntoView({ block: 'nearest' });
+    return;
+  }
+  if (ev.key === 'Enter' || ev.key === ' ') {
+    ev.preventDefault();
+    if (pickerIndex >= 0) choosePicker(pickerRows[pickerIndex].dataset.value);
+    return;
+  }
+  if (ev.key === 'Tab') { closePicker(); return; }
+  if (ev.key.length === 1) {
+    pickerTyped += ev.key.toLowerCase();
+    clearTimeout(pickerTypedTimer);
+    pickerTypedTimer = setTimeout(function () { pickerTyped = ''; }, 600);
+    const hit = pickerRows.findIndex(function (row) {
+      return row.textContent.toLowerCase().indexOf(pickerTyped) === 0;
+    });
+    if (hit >= 0) {
+      pickerIndex = hit;
+      paintPickerCursor();
+      pickerRows[hit].scrollIntoView({ block: 'nearest' });
+    }
+  }
+}
+
+function openPicker() {
+  if (document.getElementById('f-picker-panel')) return;
+  const panel = buildPickerPanel();
+  document.body.appendChild(panel);
+  document.getElementById('f-picker').classList.add('is-open');
+  document.getElementById('f-picker-trigger').setAttribute('aria-expanded', 'true');
+  pickerRows = Array.prototype.slice.call(panel.querySelectorAll('.picker-option'));
+  const selected = pickerRows.findIndex(function (row) { return row.classList.contains('is-selected'); });
+  pickerIndex = selected >= 0 ? selected : 0;
+  paintPickerCursor();
+  pickerRows[pickerIndex].scrollIntoView({ block: 'nearest' });
+  positionPickerPanel();
+  document.addEventListener('mousedown', onPickerOutside, true);
+  document.addEventListener('keydown', onPickerKey, true);
+  window.addEventListener('resize', positionPickerPanel);
+  window.addEventListener('scroll', positionPickerPanel, true);
+}
+
+function closePicker() {
+  const panel = document.getElementById('f-picker-panel');
+  if (panel) panel.remove();
+  const wrap = document.getElementById('f-picker');
+  if (wrap) wrap.classList.remove('is-open');
+  const trigger = document.getElementById('f-picker-trigger');
+  if (trigger) trigger.setAttribute('aria-expanded', 'false');
+  pickerRows = [];
+  pickerIndex = -1;
+  pickerTyped = '';
+  document.removeEventListener('mousedown', onPickerOutside, true);
+  document.removeEventListener('keydown', onPickerKey, true);
+  window.removeEventListener('resize', positionPickerPanel);
+  window.removeEventListener('scroll', positionPickerPanel, true);
+}
+
+function togglePicker() {
+  if (document.getElementById('f-picker-panel')) closePicker();
+  else openPicker();
+}
+
+function pickerTriggerKey(ev) {
+  if (document.getElementById('f-picker-panel')) return;
+  if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp' || ev.key === 'Enter' || ev.key === ' ') {
+    ev.preventDefault();
+    openPicker();
+  }
+}
+
+function choosePicker(value) {
+  setPickerValue(value);
+  closePicker();
+  syncForwarderHint();
+  document.getElementById('f-picker-trigger').focus();
+}
+
+function syncForwarderHint() {
+  const preset = FORWARD_PRESETS[pickerValue()] || { url: '', hint: '' };
+  const urlEl = document.getElementById('f-url');
+  urlEl.placeholder = preset.url;
+  urlEl.value = '';
+  document.getElementById('f-hint').textContent = preset.hint;
+}
+
+function openModal() {
+  closePicker();
+  setPickerValue(pickerValue() || 'wecom');
+  syncForwarderHint();
+  syncForwarderQuota();
+  document.getElementById('f-modal').classList.add('show');
+}
+function closeModal() { closePicker(); document.getElementById('f-modal').classList.remove('show'); }
+
+function renderForwarderList() {
+  const el = document.getElementById('f-list');
+  if (forwarders.length === 0) {
+    el.innerHTML = '<div style="color:var(--ink-muted); font-size:13px;">暂未添加任何转发目标</div>';
+    return;
+  }
+  el.innerHTML = forwarders.map(f => `
+    <div class="forwarder-card">
+      <div>
+        <div class="fwd-info-title">${escapeHtml(f.name)} <span style="font-size:11px; font-weight:normal; color:var(--ink-muted);">(${FORWARD_LABELS[f.forward_type] || f.forward_type})</span></div>
+        <div class="fwd-info-url">${escapeHtml(f.target_url)}</div>
+      </div>
+      <button class="fwd-del-btn" onclick="deleteForwarder(${f.id})">删除</button>
+    </div>
+  `).join('');
+}
+
+async function saveForwarder() {
+  const name = document.getElementById('f-name').value.trim();
+  const url = document.getElementById('f-url').value.trim();
+  const type = document.getElementById('f-type').value;
+  if (!name || !url) {
+    alert('请填写规则名称与 Webhook 地址');
+    return;
+  }
+  if (forwarders.length >= forwardLimit) {
+    alert('每个端点最多 ' + forwardLimit + ' 条转发规则，请先删除一条');
+    return;
+  }
+  const res = await fetch('/api/' + BIN_ID + '/forwarders', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, target_url: url, forward_type: type })
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(function () { return {}; });
+    alert(data.error === 'forwarder limit reached'
+      ? ('每个端点最多 ' + forwardLimit + ' 条转发规则')
+      : '保存失败，请检查网络后重试');
+    await loadForwarders();
+    return;
+  }
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-url').value = '';
+  await loadForwarders();
+}
+
+async function deleteForwarder(id) {
+  if (!confirm('确定删除该转发规则吗？')) return;
+  await fetch('/api/' + BIN_ID + '/forwarders/' + id, { method: 'DELETE' });
+  await loadForwarders();
+}
+
+hydratePushTargets();
+loadData();
+loadForwarders();
+setInterval(loadData, 2500);
+</script>
+</body>
+</html>
