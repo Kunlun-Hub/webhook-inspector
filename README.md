@@ -1,7 +1,7 @@
 # Cloudflare Webhook 接收与智能转发站 (Webhook Inspector)
 
 - 仓库：<https://github.com/Kunlun-Hub/webhook-inspector>
-- 线上地址：<https://webhook-inspector.kfc4008208820.workers.dev>（Cloudflare Worker + D1，部署在免费额度内）
+- 线上地址：https://webhook.4w.ink
 - 部署指南：[DEPLOY.md](DEPLOY.md)（从零部署、升级、备份回滚、代理与排错）
 
 这是一个跑在 Cloudflare 边缘的轻量 Webhook 调试、查看与转发工具。
